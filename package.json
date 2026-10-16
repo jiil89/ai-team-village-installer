@@ -1,0 +1,10 @@
+{
+  "name": "ai-team-village-installer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Verified current-user Windows installer for AI Team Village",
+  "bin": { "ai-team-village-install": "cli.cjs" },
+  "engines": { "node": ">=22" },
+  "files": ["cli.cjs", "auth.cjs", "http.cjs", "installer.cjs", "update-security.cjs", "release-config.json", "README.md"],
+  "scripts": { "test": "node --test *.test.cjs" }
+}

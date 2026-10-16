@@ -1,0 +1,9 @@
+{
+  "provider": "generic",
+  "url": "https://czrxhfoaebpzhnmebhgl.supabase.co/functions/v1/desktop-update/",
+  "publisherName": [
+    "AI Team Village release"
+  ],
+  "publicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAbyboskxZaWTyYEjeo7G+0OiXxsru3nANLGWI5peanWA=\n-----END PUBLIC KEY-----\n",
+  "publishableKey": "sb_publishable_mrM-wpkz7jDLjZl17YzVdA_qFWFVVa3"
+}
