@@ -12,6 +12,8 @@ npx.cmd --yes https://github.com/jiil89/ai-team-village-installer/releases/lates
 
 **앱의 첫 로그인은 설치 인증과 별도입니다.** 설치 실행기는 인증 토큰과 PKCE verifier를 파일에 저장하거나 앱에 전달하지 않습니다. 기존 앱의 프로필과 설정을 삭제하지 않습니다.
 
+설치 이후 앱의 변경 사항은 기존 자동 업데이트로 받습니다. 앱 업데이트마다 이 설치 명령을 반복할 필요는 없습니다.
+
 도움말과 버전은 인증 없이 확인할 수 있습니다.
 
 ```powershell
