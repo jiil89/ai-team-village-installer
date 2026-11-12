@@ -57,7 +57,9 @@ async function install(config, accessToken, options = {}) {
   if (!path.resolve(directory).startsWith(tempRoot + path.sep)) throw new InstallerError('CONFIG');
   try {
     const file = path.join(directory, manifest.filename);
-    await downloadFile(config.url + manifest.filename, file, manifest.size, { headers: { apikey: config.publishableKey, Authorization: 'Bearer ' + accessToken } }, { fetch: options.fetch, signal: options.signal, timeoutMs: options.downloadTimeoutMs ?? 300000 });
+    const signed = new URL(`/storage/v1/object/sign/desktop-updates/releases/${manifest.version}/${manifest.filename}?token=`, config.url).href;
+    await downloadFile(config.url + manifest.filename, file, manifest.size, { headers: { apikey: config.publishableKey, Authorization: 'Bearer ' + accessToken }, redirect: 'manual' }, { fetch: options.fetch, signal: options.signal, timeoutMs: options.downloadTimeoutMs ?? 300000,
+      acceptRedirect: location => typeof location === 'string' && location.startsWith(signed) && /^[\w.-]+$/.test(location.slice(signed.length)) });
     try { await verifyInstaller(file, manifest, options.signal); }
     catch { throw new InstallerError(options.signal?.aborted ? 'CANCELLED' : 'VERIFY'); }
     const destination = path.win32.join(localAppData, 'Programs', 'AI Team Village');

@@ -9,7 +9,7 @@ test('help and version work offline and reject token/config overrides', () => {
   const file = path.join(__dirname, 'cli.cjs');
   assert.ok(fs.existsSync(file));
   const version = spawnSync(process.execPath, [file, '--version'], { encoding: 'utf8' });
-  assert.equal(version.status, 0); assert.equal(version.stdout.trim(), '0.2.0');
+  assert.equal(version.status, 0); assert.equal(version.stdout.trim(), '0.2.1');
   const help = spawnSync(process.execPath, [file, '--help'], { encoding: 'utf8' });
   assert.equal(help.status, 0); assert.match(help.stdout, /Node\.js 22/); assert.match(help.stdout, /Windows/);
   const invalid = spawnSync(process.execPath, [file, '--token', 'private-argument'], { encoding: 'utf8' });

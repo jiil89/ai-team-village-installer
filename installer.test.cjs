@@ -23,7 +23,9 @@ async function fixture(t, change = {}) {
     fetch: async (url, init) => {
       requests.push({ url: String(url), init });
       if (String(url).endsWith('/manifest.json')) return Response.json(change.envelope || envelope);
+      if (change.location && String(url) === change.location) return new Response(bytes, { headers: { 'content-length': String(bytes.length) } });
       assert.equal(String(url), config.url + manifest.filename);
+      if (change.location) return new Response(null, { status: 302, headers: { location: change.location } });
       return new Response(change.bytes || bytes, { headers: { 'content-length': String(change.contentLength ?? bytes.length) }, status: change.status || 200 });
     },
     spawn: (file, args, spawnOptions) => {
@@ -60,7 +62,7 @@ test('only signed exact installer is run current-user with raw /D last, then app
   assert.equal(result.path, path.win32.join(f.options.localAppData, 'Programs', 'AI Team Village', 'AI Team Village.exe'));
   assert.equal(f.requests.length, 2);
   assert.equal(f.requests[1].init.headers.Authorization, 'Bearer test-access-token');
-  for (const request of f.requests) assert.equal(request.init.redirect, 'error');
+  assert.equal(f.requests[0].init.redirect, 'error'); assert.equal(f.requests[1].init.redirect, 'manual');
   assert.equal(f.children.length, 2);
   const install = f.children[0];
   assert.equal(path.basename(install.file), 'AI-Team-Village-1.2.3-Setup.exe');
@@ -84,6 +86,32 @@ test('forged signature, path traversal, bad whole hash, redirect, short and over
   ]) {
     const f = await fixture(t, change);
     await assert.rejects(installer.install(f.config, 'test-access-token', f.options));
+    assert.equal(f.children.length, 0);
+    assert.deepEqual(await fs.readdir(f.tempRoot), []);
+  }
+});
+
+const signedPath = '/storage/v1/object/sign/desktop-updates/releases/1.2.3/AI-Team-Village-1.2.3-Setup.exe?token=';
+test('the short-lived Storage link from the update function is followed without the session token', async t => {
+  const location = 'https://abcdefghijklmnopqrst.supabase.co' + signedPath + 'fake.signed-token_1';
+  const f = await fixture(t, { location });
+  assert.equal((await installer.install(f.config, 'test-access-token', f.options)).version, '1.2.3');
+  assert.equal(f.requests.length, 3);
+  assert.equal(f.requests[2].url, location);
+  assert.equal(f.requests[2].init.redirect, 'error'); assert.equal(f.requests[2].init.headers, undefined);
+  assert.equal(f.children.length, 2);
+});
+
+test('a redirect anywhere but that Storage link never downloads or executes', async t => {
+  for (const location of [
+    'https://evil.example.invalid' + signedPath + 'abc',
+    'https://abcdefghijklmnopqrst.supabase.co' + signedPath.replace('1.2.3/', '1.2.2/') + 'abc',
+    'https://abcdefghijklmnopqrst.supabase.co' + signedPath + 'abc&download=x',
+    'https://abcdefghijklmnopqrst.supabase.co' + signedPath,
+  ]) {
+    const f = await fixture(t, { location });
+    await assert.rejects(installer.install(f.config, 'test-access-token', f.options));
+    assert.equal(f.requests.length, 2);
     assert.equal(f.children.length, 0);
     assert.deepEqual(await fs.readdir(f.tempRoot), []);
   }

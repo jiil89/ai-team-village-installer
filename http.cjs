@@ -37,11 +37,11 @@ async function request(url, init, maxBytes, consume, options) {
   const cancel = () => { if (reader) void reader.cancel().catch(() => {}); else if (response?.body) void response.body.cancel().catch(() => {}); };
   try {
     signal.throwIfAborted();
-    const pending = (options.fetch || globalThis.fetch)(url, { ...init, signal, redirect: 'error', cache: 'no-store' });
+    const pending = (options.fetch || globalThis.fetch)(url, { redirect: 'error', ...init, signal, cache: 'no-store' });
     Promise.resolve(pending).then(value => { if (signal.aborted) void value.body?.cancel().catch(() => {}); }, () => {});
     response = await abortable(pending, signal);
     if (!response.ok || (options.exactSize !== undefined && response.status !== 200)) {
-      const error = new InstallerError('NETWORK'); error.status = response.status; throw error;
+      const error = new InstallerError('NETWORK'); error.status = response.status; error.location = response.headers.get('location'); throw error;
     }
     const length = response.headers.get('content-length');
     if (length !== null && (!/^\d+$/.test(length) || Number(length) > maxBytes || (options.exactSize !== undefined && Number(length) !== options.exactSize))) throw new InstallerError('DOWNLOAD');
@@ -78,8 +78,16 @@ async function requestJson(url, init, options = {}) {
 
 async function downloadFile(url, file, size, init, options = {}) {
   const handle = await fs.open(file, 'wx', 0o600);
-  try { await request(url, init, size, chunk => handle.writeFile(chunk), { ...options, exactSize: size }); }
-  finally { await handle.close(); }
+  const write = chunk => handle.writeFile(chunk), sized = { ...options, exactSize: size };
+  try {
+    try { await request(url, init, size, write, sized); }
+    catch (error) {
+      // The update function hands the file to a short-lived Storage link. Only a link the caller accepts is followed,
+      // without the session token; the signed whole-file hash is still checked before anything runs.
+      if (error.status !== 302 || !options.acceptRedirect?.(error.location)) throw error;
+      await request(error.location, {}, size, write, sized);
+    }
+  } finally { await handle.close(); }
 }
 
 module.exports = { InstallerError, abortable, requestJson, downloadFile };
